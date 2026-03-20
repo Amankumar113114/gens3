@@ -38,7 +38,7 @@ Respond ONLY with a valid JSON object (no markdown, no backticks, no preamble, r
 verdict must be exactly one of: TRUE, FALSE, PARTIALLY TRUE, UNVERIFIED`;
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: 'POST',
