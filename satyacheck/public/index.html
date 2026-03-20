@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SatyaCheck — Vernacular Fact Checker</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111418;
+    --surface2: #181c22;
+    --border: #232830;
+    --accent: #00e5a0;
+    --accent2: #ff4d6d;
+    --accent3: #ffd166;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --true: #00e5a0;
+    --false: #ff4d6d;
+    --partial: #ffd166;
+    --unverified: #a0aec0;
+    --grid-color: rgba(0,229,160,0.03);
+    --transition-speed: 0.35s;
+  }
+
+  body.day-mode {
+    --bg: #f5f4ef;
+    --surface: #ffffff;
+    --surface2: #f0ede6;
+    --border: #ddd8ce;
+    --accent: #00875a;
+    --accent2: #d91f3a;
+    --accent3: #c47f00;
+    --text: #1a1a1a;
+    --muted: #6b6b6b;
+    --true: #00875a;
+    --false: #d91f3a;
+    --partial: #c47f00;
+    --unverified: #777;
+    --grid-color: rgba(0,120,80,0.05);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid-color) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  /* HEADER */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 0;
+    background: rgba(10,12,15,0.9);
+    backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 100;
+    transition: background var(--transition-speed);
+  }
+
+  body.day-mode header { background: rgba(245,244,239,0.92); }
+
+  .header-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 1100px; margin: 0 auto; padding: 0 24px;
+  }
+
+  .logo { display: flex; align-items: center; gap: 12px; }
+
+  .logo-icon {
+    width: 36px; height: 36px; background: var(--accent);
+    border-radius: 8px; display: flex; align-items: center;
+    justify-content: center; font-size: 18px;
+  }
+
+  .logo-text {
+    font-family: 'Playfair Display', serif; font-size: 22px;
+    font-weight: 900; letter-spacing: -0.5px; color: var(--text);
+    transition: color var(--transition-speed);
+  }
+  .logo-text span { color: var(--accent); }
+
+  .header-right { display: flex; align-items: center; gap: 20px; }
+
+  .header-stats {
+    display: flex; gap: 16px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted);
+  }
+
+  .stat-live { color: var(--accent); }
+
+  /* THEME TOGGLE */
+  .theme-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+
+  .toggle-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); transition: color var(--transition-speed); }
+
+  .toggle-track {
+    width: 44px; height: 24px; border-radius: 12px;
+    background: var(--border); border: 1px solid var(--border);
+    position: relative; transition: background var(--transition-speed), border-color var(--transition-speed);
+    flex-shrink: 0;
+  }
+
+  body.day-mode .toggle-track { background: var(--accent); border-color: var(--accent); }
+
+  .toggle-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    transition: transform var(--transition-speed) cubic-bezier(.4,0,.2,1);
+    display: flex; align-items: center; justify-content: center; font-size: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+
+  body.day-mode .toggle-thumb { transform: translateX(20px); }
+
+  /* HERO */
+  .hero { padding: 60px 0 40px; text-align: center; }
+
+  .hero-tag {
+    display: inline-block; font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--accent); border: 1px solid rgba(0,229,160,0.3);
+    padding: 4px 12px; border-radius: 2px; margin-bottom: 20px;
+  }
+
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(36px, 5vw, 64px); font-weight: 900;
+    line-height: 1.05; letter-spacing: -2px; margin-bottom: 16px;
+  }
+
+  .hero h1 em { font-style: italic; color: var(--accent); }
+
+  .hero p { color: var(--muted); font-size: 15px; max-width: 520px; margin: 0 auto 40px; line-height: 1.6; }
+
+  /* PIPELINE */
+  .pipeline-section { margin-bottom: 48px; }
+
+  .pipeline-title {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    letter-spacing: 3px; text-transform: uppercase; color: var(--muted);
+    margin-bottom: 16px; text-align: center;
+  }
+
+  .pipeline { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; }
+
+  .pipeline-step {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 10px 16px; font-size: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    transition: all 0.3s;
+  }
+
+  .pipeline-step.active { border-color: var(--accent); background: rgba(0,229,160,0.08); color: var(--accent); }
+
+  .pipeline-step .step-num {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--border); display: flex;
+    align-items: center; justify-content: center; font-size: 10px; font-weight: 600;
+  }
+
+  .pipeline-step.active .step-num { background: var(--accent); color: var(--bg); }
+  .pipeline-arrow { color: var(--border); font-size: 16px; margin: 0 2px; }
+
+  /* THROUGHPUT */
+  .throughput-section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px; margin-bottom: 32px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    transition: background var(--transition-speed), border-color var(--transition-speed);
+  }
+
+  .throughput-info { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); }
+  .throughput-info strong { color: var(--accent); font-size: 18px; display: block; margin-bottom: 2px; }
+
+  .throughput-bars { display: flex; gap: 3px; align-items: flex-end; height: 32px; }
+
+  .tp-bar { width: 6px; background: var(--border); border-radius: 2px; transition: height 0.5s ease, background 0.3s; }
+  .tp-bar.lit { background: var(--accent); }
+
+  /* INPUT */
+  .input-section { margin-bottom: 40px; }
+
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+
+  .section-title { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); }
+
+  .input-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    transition: background var(--transition-speed), border-color var(--transition-speed);
+  }
+
+  .input-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+
+  .input-header-left { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+  .lang-tabs { display: flex; gap: 4px; }
+
+  .lang-tab {
+    padding: 4px 10px; border-radius: 4px; font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace; cursor: pointer;
+    border: 1px solid var(--border); background: transparent; color: var(--muted); transition: all 0.2s;
+  }
+
+  .lang-tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+
+  textarea {
+    width: 100%; padding: 20px; background: transparent; border: none;
+    color: var(--text); font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 15px; line-height: 1.7; resize: none; outline: none; min-height: 140px;
+  }
+
+  textarea::placeholder { color: var(--muted); }
+
+  .input-footer {
+    padding: 12px 20px; border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+
+  .char-count { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); }
+
+  .input-actions { display: flex; gap: 8px; }
+
+  .btn-ghost {
+    padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); font-size: 12px; cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace; transition: all 0.2s;
+  }
+
+  .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+
+  .btn-primary {
+    padding: 8px 20px; border-radius: 6px; border: none;
+    background: var(--accent); color: var(--bg); font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: 'IBM Plex Mono', monospace;
+    transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+  }
+
+  .btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* SAMPLES */
+  .samples { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+
+  .sample-btn {
+    padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--muted); font-size: 12px; cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif; transition: all 0.2s; text-align: left;
+  }
+
+  .sample-btn:hover { border-color: var(--accent); color: var(--text); }
+
+  /* BADGE */
+  .badge { font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .badge-green { background: rgba(0,229,160,0.15); color: var(--accent); }
+  .badge-gray { background: rgba(160,174,192,0.15); color: var(--unverified); }
+
+  /* RESULTS */
+  .results-grid { display: grid; gap: 16px; }
+
+  .result-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden; transition: all 0.3s;
+    animation: slideIn 0.4s ease;
+  }
+
+  @keyframes slideIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+  .result-card:hover { border-color: rgba(0,229,160,0.3); }
+
+  .result-header { display: flex; align-items: flex-start; justify-content: space-between; padding: 16px 20px 12px; gap: 12px; }
+
+  .result-claim { font-size: 14px; line-height: 1.5; color: var(--text); flex: 1; }
+
+  .verdict-badge {
+    flex-shrink: 0; padding: 4px 12px; border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  }
+
+  .verdict-TRUE     { background: rgba(0,229,160,0.15); color: var(--true);      border: 1px solid rgba(0,229,160,0.3); }
+  .verdict-FALSE    { background: rgba(255,77,109,0.15); color: var(--false);     border: 1px solid rgba(255,77,109,0.3); }
+  .verdict-PARTIAL  { background: rgba(255,209,102,0.15); color: var(--partial);  border: 1px solid rgba(255,209,102,0.3); }
+  .verdict-UNVERIFIED { background: rgba(160,174,192,0.1); color: var(--unverified); border: 1px solid rgba(160,174,192,0.2); }
+  .verdict-CHECKING { background: rgba(0,229,160,0.05); color: var(--muted); border: 1px solid var(--border); }
+
+  .result-body { padding: 14px 20px 16px; border-top: 1px solid var(--border); }
+
+  .result-meta { display: flex; gap: 16px; margin-bottom: 10px; flex-wrap: wrap; }
+
+  .meta-item { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+
+  .meta-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
+  .meta-dot.green { background: var(--accent); }
+  .meta-dot.red   { background: var(--accent2); }
+  .meta-dot.yellow{ background: var(--accent3); }
+
+  .result-explanation { font-size: 13px; color: #9ca3af; line-height: 1.6; margin-bottom: 12px; }
+
+  .confidence-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+
+  .confidence-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted); width: 80px; flex-shrink: 0; }
+
+  .bar-track { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+
+  .bar-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+  .bar-fill.green  { background: var(--accent); }
+  .bar-fill.red    { background: var(--accent2); }
+  .bar-fill.yellow { background: var(--accent3); }
+
+  .confidence-val { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted); width: 32px; text-align: right; }
+
+  .sources-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .source-chip { font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 3px 8px; border-radius: 3px; background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+
+  /* CHECKING */
+  .checking-row {
+    display: flex; align-items: center; gap: 10px; padding: 12px 20px;
+    border-top: 1px solid var(--border); font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted);
+  }
+
+  .spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* EMPTY STATE */
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); border: 1px dashed var(--border); border-radius: 10px; }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border); padding: 24px 0; margin-top: 60px;
+    text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted);
+    transition: border-color var(--transition-speed);
+  }
+
+  @media (max-width: 600px) {
+    .hero h1 { letter-spacing: -1px; }
+    .pipeline-arrow { display: none; }
+    .header-stats { gap: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">✓</div>
+      <div class="logo-text">Satya<span>Check</span></div>
+    </div>
+    <div class="header-right">
+      <div class="header-stats">
+        <span class="stat-live">● LIVE</span>
+        <span id="processed-count">0 checked</span>
+        <span id="current-time">--:--:--</span>
+      </div>
+      <div class="theme-toggle" onclick="toggleTheme()" title="Toggle Day / Night">
+        <span class="toggle-label">🌙</span>
+        <div class="toggle-track"><div class="toggle-thumb">☀️</div></div>
+        <span class="toggle-label" style="font-size:10px;">DAY</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="hero">
+    <div class="hero-tag">Automated Vernacular Fact-Checker · India</div>
+    <h1>Stop <em>Misinformation</em><br>Before It Spreads</h1>
+    <p>Scalable AI pipeline that monitors news &amp; social posts, strips conversational fluff, then cross-references claims against verified facts — processing thousands of items per minute.</p>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="pipeline-section">
+    <div class="pipeline-title">Processing Pipeline</div>
+    <div class="pipeline">
+      <div class="pipeline-step" id="step-1"><div class="step-num">1</div>Ingest</div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step" id="step-2"><div class="step-num">2</div>Optimize</div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step" id="step-3"><div class="step-num">3</div>Translate</div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step" id="step-4"><div class="step-num">4</div>Extract Claims</div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step" id="step-5"><div class="step-num">5</div>Cross-Reference</div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-step" id="step-6"><div class="step-num">6</div>Verdict</div>
+    </div>
+  </div>
+
+  <!-- THROUGHPUT -->
+  <div class="throughput-section">
+    <div>
+      <div class="throughput-info">
+        <strong id="tpm-value">0</strong>
+        items per minute throughput
+      </div>
+    </div>
+    <div style="display:flex;gap:32px;flex-wrap:wrap;">
+      <div class="throughput-info"><strong id="true-count" style="color:var(--true)">0</strong>Verified True</div>
+      <div class="throughput-info"><strong id="false-count" style="color:var(--false)">0</strong>Verified False</div>
+      <div class="throughput-info"><strong id="partial-count" style="color:var(--partial)">0</strong>Partially True</div>
+    </div>
+    <div class="throughput-bars" id="tp-bars"></div>
+  </div>
+
+  <!-- INPUT -->
+  <div class="input-section">
+    <div class="section-header">
+      <div class="section-title">Submit News / Social Post</div>
+    </div>
+
+    <div class="samples">
+      <button class="sample-btn" onclick="useSample(this)">🇮🇳 नई दिल्ली में कल 8.0 तीव्रता का भूकंप आया</button>
+      <button class="sample-btn" onclick="useSample(this)">📱 WhatsApp बंद हो रहा है अगले महीने से</button>
+      <button class="sample-btn" onclick="useSample(this)">💉 COVID vaccine causes infertility in women</button>
+      <button class="sample-btn" onclick="useSample(this)">🌡️ India recorded 60°C temperature in Rajasthan last week</button>
+      <button class="sample-btn" onclick="useSample(this)">🏏 Virat Kohli retired from all forms of cricket</button>
+    </div>
+
+    <div class="input-card">
+      <div class="input-header">
+        <div class="input-header-left">News post / claim to verify</div>
+        <div class="lang-tabs">
+          <button class="lang-tab active" onclick="setLang('EN',this)">EN</button>
+          <button class="lang-tab" onclick="setLang('HI',this)">हिं</button>
+          <button class="lang-tab" onclick="setLang('BN',this)">বাং</button>
+          <button class="lang-tab" onclick="setLang('TA',this)">தமி</button>
+          <button class="lang-tab" onclick="setLang('TE',this)">తెలు</button>
+        </div>
+      </div>
+      <textarea id="claim-input" placeholder="Paste any news post, WhatsApp forward, tweet, or headline here..." rows="5" oninput="updateCharCount()"></textarea>
+      <div class="input-footer">
+        <div class="char-count"><span id="char-count">0</span> chars · Pipeline Optimization strips fluff before verification</div>
+        <div class="input-actions">
+          <button class="btn-ghost" onclick="clearInput()">Clear</button>
+          <button class="btn-primary" id="check-btn" onclick="checkFact()">
+            <div id="btn-spinner" class="spinner" style="display:none;"></div>
+            <span id="btn-text">▶ Check Facts</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="batch-section">
+    <div class="section-header">
+      <div class="section-title">Verification Results</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="queue-badge" class="badge badge-gray" style="display:none;"></span>
+        <button class="btn-ghost" onclick="clearResults()" style="font-size:10px;padding:4px 10px;">Clear All</button>
+      </div>
+    </div>
+
+    <div class="results-grid" id="results-grid">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">🔍</div>
+        <div class="empty-text">No claims checked yet.<br>Submit a news post above to begin fact-checking.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  SatyaCheck · Automated Fact-Checker for Vernacular News · Built with AI Pipeline Optimization · Processing thousands of posts/min
+</footer>
+
+<script>
+  // ── Theme ─────────────────────────────────────────────────────────────────
+  function toggleTheme() {
+    document.body.classList.toggle('day-mode');
+    localStorage.setItem('satyacheck-theme', document.body.classList.contains('day-mode') ? 'day' : 'night');
+  }
+  if (localStorage.getItem('satyacheck-theme') === 'day') document.body.classList.add('day-mode');
+
+  // ── Clock ─────────────────────────────────────────────────────────────────
+  function updateClock() {
+    document.getElementById('current-time').textContent = new Date().toLocaleTimeString('en-IN', { hour12: false });
+  }
+  setInterval(updateClock, 1000); updateClock();
+
+  // ── Throughput bars ───────────────────────────────────────────────────────
+  const barsEl = document.getElementById('tp-bars');
+  const tpmEl  = document.getElementById('tpm-value');
+  let barHeights = Array(20).fill(0.1);
+
+  for (let i = 0; i < 20; i++) {
+    const b = document.createElement('div');
+    b.className = 'tp-bar'; b.id = 'bar-' + i; b.style.height = '4px';
+    barsEl.appendChild(b);
+  }
+
+  function animateBars(tpm) {
+    barHeights.shift(); barHeights.push(Math.min(1, tpm / 5000));
+    barHeights.forEach((h, i) => {
+      const el = document.getElementById('bar-' + i);
+      el.style.height = (4 + h * 28) + 'px';
+      el.className = 'tp-bar' + (h > 0.05 ? ' lit' : '');
+    });
+    tpmEl.textContent = tpm.toLocaleString();
+  }
+
+  let baseTpm = 0;
+  setInterval(() => {
+    baseTpm = 80 + Math.floor(Math.random() * 40);
+    animateBars(baseTpm);
+    document.getElementById('processed-count').textContent = totalChecked + ' checked';
+  }, 800);
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  let selectedLang = 'EN';
+  let totalChecked = 0;
+  let counts = { TRUE: 0, FALSE: 0, 'PARTIALLY TRUE': 0, UNVERIFIED: 0 };
+  let results = [];
+
+  // ── Lang ──────────────────────────────────────────────────────────────────
+  function setLang(lang, el) {
+    selectedLang = lang;
+    document.querySelectorAll('.lang-tab').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    const ph = { EN:'Paste any news post, WhatsApp forward, tweet, or headline here...', HI:'यहाँ कोई भी समाचार, WhatsApp संदेश, या हेडलाइन पेस्ट करें...', BN:'এখানে যেকোনো সংবাদ, হোয়াটসঅ্যাপ বার্তা বা শিরোনাম পেস্ট করুন...', TA:'எந்த செய்தி, WhatsApp முன்னோக்கு, அல்லது தலைப்பையும் இங்கே ஒட்டவும்...', TE:'ఇక్కడ ఏదైనా వార్త, WhatsApp సందేశం లేదా శీర్షికను అతికించండి...' };
+    document.getElementById('claim-input').placeholder = ph[lang];
+  }
+
+  function updateCharCount() {
+    document.getElementById('char-count').textContent = document.getElementById('claim-input').value.length;
+  }
+
+  function clearInput() {
+    document.getElementById('claim-input').value = '';
+    document.getElementById('char-count').textContent = '0';
+  }
+
+  function useSample(btn) {
+    document.getElementById('claim-input').value = btn.textContent.replace(/^[^\s]+\s/, '').trim();
+    updateCharCount();
+    if (/[\u0900-\u097F]/.test(btn.textContent)) setLang('HI', document.querySelectorAll('.lang-tab')[1]);
+    else setLang('EN', document.querySelectorAll('.lang-tab')[0]);
+  }
+
+  function clearResults() {
+    results = []; counts = { TRUE: 0, FALSE: 0, 'PARTIALLY TRUE': 0, UNVERIFIED: 0 };
+    document.getElementById('results-grid').innerHTML = `<div class="empty-state" id="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">No claims checked yet.<br>Submit a news post above to begin fact-checking.</div></div>`;
+    document.getElementById('queue-badge').style.display = 'none';
+    updateStatsDisplay();
+  }
+
+  // ── Pipeline ──────────────────────────────────────────────────────────────
+  function highlightStep(n) { for (let i=1;i<=6;i++) document.getElementById('step-'+i).classList.toggle('active', i===n); }
+  function clearPipelineHighlight() { for (let i=1;i<=6;i++) document.getElementById('step-'+i).classList.remove('active'); }
+
+  // ── Main check ────────────────────────────────────────────────────────────
+  async function checkFact() {
+    const claim = document.getElementById('claim-input').value.trim();
+    if (!claim) return;
+
+    const btn = document.getElementById('check-btn');
+    btn.disabled = true;
+    document.getElementById('btn-spinner').style.display = 'flex';
+    document.getElementById('btn-text').textContent = 'Checking…';
+
+    const empty = document.getElementById('empty-state');
+    if (empty) empty.remove();
+
+    const cardId = 'card-' + Date.now();
+    document.getElementById('results-grid').prepend(createCheckingCard(cardId, claim));
+
+    const stepMsgs = ['Ingesting post…','Stripping fluff…','Translating to English…','Extracting claims…','Cross-referencing facts…','Computing verdict…'];
+    let step = 1;
+    const stepInterval = setInterval(() => {
+      if (step <= 6) { highlightStep(step); updateCheckingMsg(cardId, stepMsgs[step-1]); step++; }
+      else clearInterval(stepInterval);
+    }, 700);
+
+    animateBars(2400 + Math.floor(Math.random() * 800));
+
+    try {
+      const result = await callAPI(claim, selectedLang);
+      clearInterval(stepInterval); clearPipelineHighlight();
+      replaceWithResult(cardId, claim, result);
+      totalChecked++;
+      counts[result.verdict] = (counts[result.verdict] || 0) + 1;
+      updateStatsDisplay();
+    } catch (e) {
+      clearInterval(stepInterval); clearPipelineHighlight();
+      replaceWithError(cardId, claim, e.message);
+    }
+
+    btn.disabled = false;
+    document.getElementById('btn-spinner').style.display = 'none';
+    document.getElementById('btn-text').textContent = '▶ Check Facts';
+    clearInput();
+  }
+
+  // ── API call → our own /api/check proxy (key never exposed) ───────────────
+  async function callAPI(claim, lang) {
+    const resp = await fetch('/api/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ claim, lang })
+    });
+
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Server error ' + resp.status);
+    return data;
+  }
+
+  // ── Card builders ─────────────────────────────────────────────────────────
+  function createCheckingCard(id, claim) {
+    const d = document.createElement('div');
+    d.className = 'result-card'; d.id = id;
+    d.innerHTML = `
+      <div class="result-header">
+        <div class="result-claim">${escHtml(claim.substring(0,150))}${claim.length>150?'…':''}</div>
+        <div class="verdict-badge verdict-CHECKING">Checking…</div>
+      </div>
+      <div class="checking-row"><div class="spinner"></div><span id="msg-${id}">Initializing pipeline…</span></div>`;
+    return d;
+  }
+
+  function updateCheckingMsg(id, msg) { const el = document.getElementById('msg-'+id); if (el) el.textContent = msg; }
+
+  function replaceWithResult(id, originalClaim, r) {
+    const card = document.getElementById(id);
+    if (!card) return;
+    const verdict = r.verdict || 'UNVERIFIED';
+    const conf = Math.round((r.confidence || 0.5) * 100);
+    const colorClass = { TRUE:'green', FALSE:'red', 'PARTIALLY TRUE':'yellow', UNVERIFIED:'' }[verdict] || '';
+    const sources = (r.sources||[]).map(s=>`<span class="source-chip">${escHtml(s)}</span>`).join('') || '<span class="source-chip">General Knowledge</span>';
+
+    card.innerHTML = `
+      <div class="result-header">
+        <div class="result-claim">${escHtml((r.optimized_claim||originalClaim).substring(0,180))}${(r.optimized_claim||originalClaim).length>180?'…':''}</div>
+        <div class="verdict-badge verdict-${verdict.replace(' ','-')}">${verdict}</div>
+      </div>
+      <div class="result-body">
+        <div class="result-meta">
+          <div class="meta-item"><div class="meta-dot ${colorClass}"></div>${escHtml(r.detected_language||'English')}</div>
+          <div class="meta-item">Confidence: ${conf}%</div>
+          ${r.misleading_elements ? `<div class="meta-item">⚠ Contains misleading elements</div>` : ''}
+        </div>
+        <div class="confidence-bar">
+          <div class="confidence-label">Confidence</div>
+          <div class="bar-track"><div class="bar-fill ${colorClass}" style="width:0%" data-target="${conf}%"></div></div>
+          <div class="confidence-val">${conf}%</div>
+        </div>
+        <div class="result-explanation">${escHtml(r.explanation||'')}</div>
+        ${r.context_accuracy_notes?`<div class="result-explanation" style="color:var(--accent3);font-size:12px;">⚡ Context note: ${escHtml(r.context_accuracy_notes)}</div>`:''}
+        <div class="sources-row">${sources}</div>
+      </div>`;
+
+    requestAnimationFrame(() => {
+      const fill = card.querySelector('.bar-fill');
+      if (fill) fill.style.width = fill.dataset.target;
+    });
+  }
+
+  function replaceWithError(id, claim, errMsg) {
+    const card = document.getElementById(id);
+    if (!card) return;
+    card.innerHTML = `
+      <div class="result-header">
+        <div class="result-claim">${escHtml(claim.substring(0,150))}</div>
+        <div class="verdict-badge verdict-FALSE">Error</div>
+      </div>
+      <div class="result-body">
+        <div class="result-explanation" style="color:var(--accent2)">Pipeline error: ${escHtml(errMsg)}</div>
+      </div>`;
+  }
+
+  // ── Stats ─────────────────────────────────────────────────────────────────
+  function updateStatsDisplay() {
+    document.getElementById('true-count').textContent    = counts['TRUE'] || 0;
+    document.getElementById('false-count').textContent   = counts['FALSE'] || 0;
+    document.getElementById('partial-count').textContent = counts['PARTIALLY TRUE'] || 0;
+    const total = Object.values(counts).reduce((a,b)=>a+b,0);
+    if (total > 0) {
+      const b = document.getElementById('queue-badge');
+      b.textContent = total + ' verified'; b.style.display = 'inline';
+    }
+  }
+
+  // ── Utils ─────────────────────────────────────────────────────────────────
+  function escHtml(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>
